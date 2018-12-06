@@ -1,10 +1,6 @@
 import pandas as pd
-from data_preprocessing import *
 import random
 import numpy as np
-import scipy.sparse as sparse
-from scipy.sparse.linalg import spsolve
-from sklearn.preprocessing import MinMaxScaler
 
 # __________________
 # preparation data
@@ -32,6 +28,7 @@ main_test = main[main.event.isin(event_list_test)]
 # on regroupe les données avec celles donnant des informations sur les événements
 main_train = main_train.rename(index=str, columns={'event': 'event_id'})
 data_train = pd.merge(main_train, events, on='event_id')
+data_train.iloc[:, 5:20].head()
 
 main_test = main_test.rename(index=str, columns={'event': 'event_id'})
 data_test = pd.merge(main_test, events, on='event_id')
@@ -47,18 +44,23 @@ main_train[main_train.user == user_test]
 # TODO ajouter les friends pour augmenter le data set
 # TODO ajouter d'autres variables pour enrichir les modèles
 
-# _____________________
-#  partie predictions
-# _____________________
+# ______________________
+#   partie predictions
+# ______________________
 
 # import packages
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
 
 # calcul des predictions
 columns = [data_train.columns[0]] + list(data_train.columns[range(14, 115)])
+
 predictionsSVC = []
 predictionsNN = []
+predictionsDTree = []
+
+ii=0
 
 for ii in data_test.index:
     user = data_test.loc[ii, 'user']
@@ -67,13 +69,16 @@ for ii in data_test.index:
     y = data_train[data_train.user == user]['interested']
     predictionSVC = []
     predictionNN = []
+    predictionDTree = []
 
     if len(y.unique()) == 1:
         predictionSVC.append(y.unique()[0])
         predictionNN.append(y.unique()[0])
+        predictionDTree.append(y.unique()[0])
     elif len(y.unique()) == 0:
         predictionSVC.append(np.nan)
         predictionNN.append(np.nan)
+        predictionDTree.append(np.nan)
     else:
         # partie SVC
         classifSVC = SVC(gamma='auto')
@@ -86,13 +91,18 @@ for ii in data_test.index:
         predictionNN = neigh.predict(data_test.loc[data_test.event_id == event, columns])
 
         # partie arbre de decision
+        classifDT = DecisionTreeClassifier(random_state=0)
+        classifDT.fit(X, y)
+        predictionDTree = classifDT.predict(data_test.loc[data_test.event_id == event, columns])
 
     # add to predictions
     predictionsSVC.append(predictionSVC[0])
     predictionsNN.append(predictionNN[0])
+    predictionsDTree.append(predictionDTree[0])
 
 data_test['pred_SVC'] = predictionsSVC
 data_test['pred_NN'] = predictionsNN
+data_test['pred_DT'] = predictionsDTree
 
 # scores
 score_columns = ['model_name', 'TP', 'FP', 'FN', 'precision', 'recall', 'F1']
