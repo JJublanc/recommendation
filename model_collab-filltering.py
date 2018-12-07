@@ -1,23 +1,23 @@
-from data_preprocessing import *
 import numpy as np
+import pandas as pd
 import scipy.sparse as sparse
-from scipy.sparse.linalg import spsolve
-from sklearn.preprocessing import MinMaxScaler
 
 # __________________
 # preparation data
 # __________________
 
-# on créer des identifiants int pour les users et events
-main_train_save = main_train
-main_test_save = main_test
+main_train = pd.read_csv('.\\data\\data_main_train.csv')
+main_test = pd.read_csv('.\\data\\data_main_test.csv')
+
+main_train = main_train.drop(main_train.columns[0], axis=1)
+main_test = main_test.drop(main_test.columns[0], axis=1)
 
 # pour réinitialiser les données sans avoir à rappeler data_preprocessing
 # main_train = main_train_save
 # main_test = main_test_save
 
-
 main_train = main_train.assign(user_id=main_train.user.astype("category").cat.codes)
+main_train = main_train.rename(index=str,columns={'event_id':'event'})
 main_train = main_train.assign(event_id=main_train['event'].astype("category").cat.codes)
 
 # on créer deux tables de passage pour récupérer ensuite les identifiants et noms originaux des users et events
@@ -62,8 +62,10 @@ from scipy.sparse.linalg import svds
 u, s, vt = svds(data_sparse.astype(float), k=10)
 svd_matrix = u.dot(np.diag(s)).dot(vt)
 
-
+#_________________________
 # fonction de prediction
+#_________________________
+
 def prediction_SVD(user_test, event_test):
     user_test_id = user_lookup[user_lookup.user == user_test].user_id.astype(int)
     event_test_id = event_lookup[event_lookup.event == event_test].event_id.astype(int)
@@ -89,3 +91,14 @@ import matplotlib.pyplot as plt
 
 plt.figure()
 plt.plot(fpr, tpr)
+
+#___________________________________
+# calcul des plus proches voisins
+#___________________________________
+
+user = main_test.user.unique()[0]
+user_test_id = user_lookup[user_lookup.user == user].user_id.astype(int)
+
+u[user_test_id]
+
+# TODO calculer les plus proches voisi de u[user_test_id]
